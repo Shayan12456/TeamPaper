@@ -72,6 +72,7 @@ dist/
 *.sln
 .DS_Store
 Thumbs.db
+oac
 
 # Mac-specific files
 .AppleDouble
@@ -86,3 +87,4 @@ Thumbs.db
 
 # Other files
 .DS_Store
+

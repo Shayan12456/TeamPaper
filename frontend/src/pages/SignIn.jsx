@@ -20,11 +20,16 @@ function Signin() {
         body: JSON.stringify(formData), // Convert the data to a JSON string
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
       const data = await response.json();
       console.log(data); // Log the data received from the backend
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }else {
+        window.location.href = "http://localhost:5173/signup"
+;
+      }
+      
     } catch (error) {
       console.error('Error fetching data:', error);
     }

@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "../components/UI/Login.jsx/components/ui/input";
 import { Label } from "../components/UI/Login.jsx/components/ui/label";
 import { Chrome } from "lucide-react";
-import { Link } from 'react-router-dom';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
+
 function Signup() {
   const [formData, setFormData] = useState({});
+  const navigate = useNavigate(); // Use React Router's navigate hook
 
   async function sendDataToBackend() {
     try {
@@ -19,17 +21,17 @@ function Signup() {
         },
         body: JSON.stringify(formData), // Convert the data to a JSON string
       });
+      
       const data = await response.json();
       console.log(data); // Log the data received from the backend
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }else {
-        <Navigate to="/" replace />;
-        // navigate();
+        window.location.href = "http://localhost:5173/home";
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching data:', error.message);
     }
   }
 
