@@ -1,4 +1,3 @@
-import { Search, Plus, MoreVertical, User, FileText } from 'lucide-react';
 import { NewDocument, RecentDocuments } from '../components/UI/index';
 export default function DocDashboard(){
 

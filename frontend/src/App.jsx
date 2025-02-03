@@ -1,7 +1,7 @@
-import { Home, NotFoundError, SignIn, SignUp, DocDashboard, PrivatePage }  from "./pages/index"
+import { Home, NotFoundError, SignIn, SignUp, DocDashboard, PrivatePage, TextEditor }  from "./pages/index"
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import Footer from './components/layout/Footer';
-import MainLayout from './components/layout/MainLayout';
+import MainFooterLayout from './components/layout/MainFooterLayout';
+import MainNavbarLayout from './components/layout/MainNavbarLayout';
 import Test from "./pages/Test";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import { AuthProvider } from './context/AuthContext';
@@ -10,32 +10,33 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-      {/* Navigation */}
-      <MainLayout />
+          {/* Navigation */}
+          <MainNavbarLayout />
 
-      {/* Routes */}
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/home" element={<Home />} />
-        <Route path="/login" element={<SignIn />} />
-        <Route path="/signup" element={<SignUp />} />
-        <Route path="/privatepage" element={
-          <ProtectedRoute>
-            <PrivatePage />
-          </ProtectedRoute>
-              }/>
-        <Route path="*" element={<NotFoundError />} />
-        <Route
-            path="/document"
-            element={
+          {/* Routes */}
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/login" element={<SignIn />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/privatepage" element={
               <ProtectedRoute>
-                <DocDashboard />
+                <PrivatePage />
               </ProtectedRoute>
-              }/>
-      </Routes>
+                  }/>
+            <Route
+                path="/document"
+                element={
+                  <ProtectedRoute>
+                    <DocDashboard />
+                  </ProtectedRoute>
+                  }/>
+            <Route path="/text-editor/:id" element={<TextEditor />} />
+            <Route path="*" element={<NotFoundError />} />
+          </Routes>
 
-      {/* Footer */}
-      <Footer />
+          {/* Footer */}
+          <MainFooterLayout />
       </Router>
     </AuthProvider>
   );

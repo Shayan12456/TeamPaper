@@ -29,7 +29,7 @@ mongoose.connect('mongodb+srv://shayandeveloper12:abcd@cluster0.gj6rrny.mongodb.
 // Middleware to Protect Routes
 const verifyToken = (req, res, next) => {
   const token = req.cookies.accessToken; 
-  console.log(token)
+
   if (!token) return res.status(401).json({ error: "Unauthorized" });
 
   try {
@@ -120,7 +120,7 @@ app.post("/logout", (req, res) => {
 });
 // app.post("/newdoc", verifyToken, async (req, res) => {
 
-app.post("/newdoc", async (req, res) => {
+app.post("/newdoc", verifyToken, async (req, res) => {
   try{
     console.log("passed");
     const data = req.body;
@@ -134,10 +134,27 @@ app.post("/newdoc", async (req, res) => {
     await newDoc.save();
   
     console.log(newDoc);
-    res.status(200).json({ message: "Document created" });
+    res.status(200).json({ message: "Document created", newDoc });
   }catch(err){
     console.log(err);
   }
+});
+
+app.get("/text-editor/:id", async (req, res) => {
+    const id = req.params.id;
+    
+    // Check if the Document already exists using the findOne() method
+    const existingDoc = await Document.findOne({ _id: id });
+
+    res.json(existingDoc);
+  });
+
+app.put("/text-editor/:id", async (req, res) => {
+  const title = req.body.documentTitle;
+  const id = req.params.id;
+    console.log(req.body, id)
+  await Document.findOneAndUpdate({_id: id}, {title});
+  res.end();
 });
 
 app.get("*", (req, res)=>{

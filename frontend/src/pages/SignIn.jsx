@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 
 function Signin() {
   const [formData, setFormData] = useState({});
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
 
   async function sendDataToBackend() {
     try {
@@ -33,10 +34,9 @@ function Signin() {
       
     } catch (error) {
       console.error('Error fetching data:', error);
+      window.location.href = "http://localhost:5173/signup";
     }
   }
-
-   const [isAuthenticated, setIsAuthenticated] = useState(null);
   
       useEffect(() => {
         const checkAuth = async () => {
@@ -69,12 +69,7 @@ function Signin() {
               <CardDescription>Enter your credentials to access your account</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* <div className="space-y-2">
-                <Button variant="outline" className="w-full cursor-pointer hover:bg-black hover:text-[white]" type="button">
-                  <Chrome className="mr-2 h-4 w-4" />
-                  Continue with Google
-                </Button>
-              </div> */}
+          
     
               <form onSubmit={(e)=>{e.preventDefault();sendDataToBackend();}}>
     

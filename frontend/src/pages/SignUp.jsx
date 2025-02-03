@@ -1,5 +1,5 @@
 // Signup.jsx
-import { useState } from 'react';
+import { useState , useEffect} from 'react';
 import { Button } from "../components/UI/Login.jsx/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/UI/Login.jsx/components/ui/card";
 import { Input } from "../components/UI/Login.jsx/components/ui/input";
@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 
 function Signup() {
   const [formData, setFormData] = useState({});
-  const [accessToken, setAccessToken] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(null);
 
   async function sendDataToBackend() {
     try {
@@ -20,60 +20,50 @@ function Signup() {
           "Content-Type": "application/json", // Set the content type to JSON
         },
         body: JSON.stringify(formData), // Convert the data to a JSON string
+        credentials: "include", // ✅ Include credentials
       });
+
+      // credentials: "include" ensures that:
+      // ✅ The browser sends cookies (e.g., accessToken) with the request.
+      // ✅ The browser accepts cookies sent from the server.
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // ✅ FIX: Redirect using React Router (faster & avoids full reload)
-      // window.location.href = "http://localhost:5173/home";
+      window.location.href = "http://localhost:5173/document"
       
     } catch (error) {
-      console.error('Error fetching data:', error.message);
+      console.error('Error fetching data:', error);
+      window.location.href = "http://localhost:5173/signup";
     }
   }
-
-    // const fetchProtectedData = async () => {
-    //   if (!accessToken) return console.error("No Access Token");
-    
-    //   const response = await fetch("http://localhost:8080/protected", {
-    //     headers: { Authorization: `Bearer ${accessToken}` },
-    //   });
-    
-    //   const data = await response.json();
-    //   console.log("Protected Data:", data);
-    // };
-
-    const [isAuthenticated, setIsAuthenticated] = useState(null);
-      
-    useEffect(() => {
-            const checkAuth = async () => {
-              try {
-                const response = await fetch("http://localhost:8080/auth/check", {
-                  method: "GET",
-                  credentials: "include", // Include HTTP-only cookies
-                });
-        
-                  const data = await response.json();
-                  setIsAuthenticated(data.authenticated);
-                
-        
-              } catch (error) {
-                console.error("Error verifying authentication:", error);
-                setIsAuthenticated(false);
-              }
-            };
-        
-            checkAuth();
-    }, []);
-    
-
-// asynchronous function when dealt with async awit leads the sequential exec of operations either sunchronous or async
   
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("http://localhost:8080/auth/check", {
+          method: "GET",
+          credentials: "include", // Include HTTP-only cookies
+        });
+
+          const data = await response.json();
+          setIsAuthenticated(data.authenticated);
+        
+
+      } catch (error) {
+        console.error("Error verifying authentication:", error);
+        setIsAuthenticated(false);
+      }
+    };
+
+    checkAuth();
+  }, []);    
+
+// asynchronous function when dealt with async awit leads the sequential exec of operations either synchronous or asynchronous
   return (
     <>
-      {isAuthenticated ? window.location.href = "http://localhost:5173/document" :
+      {isAuthenticated ? window.location.href = "http://localhost:5173/tool" :
         <div className="min-h-screen w-full flex items-center justify-center bg-background">
           <Card className="w-full max-w-md mx-4">
             <CardHeader className="space-y-1">

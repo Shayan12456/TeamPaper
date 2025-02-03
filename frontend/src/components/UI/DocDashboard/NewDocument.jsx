@@ -21,9 +21,10 @@ export default function NewDocument() {
       
 
     async function createDocument(){
-        const data = checkAuth();
+        
+        checkAuth();
 
-        await fetch("http://localhost:8080/newdoc", {
+       const documentData = await fetch("http://localhost:8080/newdoc", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json", // Set the content type to JSON
@@ -36,7 +37,11 @@ export default function NewDocument() {
             credentials: "include",
         });
 
-        console.log("Document created");
+        let parsedDocumentData = await documentData.json()
+        console.log(parsedDocumentData.newDoc._id)
+
+        window.location.href = "http://localhost:5173/text-editor/" + parsedDocumentData.newDoc._id;
+
     }
     
     const templates = [

@@ -14,8 +14,8 @@ const ProtectedRoute = ({ children }) => {
 
           const data = await response.json();
           setIsAuthenticated(data.authenticated);
-        
           console.log(data)
+        
       } catch (error) {
         console.error("Error verifying authentication:", error);
         setIsAuthenticated(false);
