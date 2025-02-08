@@ -51,6 +51,7 @@ import { useParams } from 'react-router-dom';
     const data = await documentData.json();
     console.log(data);
     setDocumentTitle(data.title);
+    setContent(data.content)
   };
 
   textEditorData();
@@ -93,10 +94,6 @@ import { useParams } from 'react-router-dom';
 
     const data = await documentData.json();
     console.log(data);
-    // setContent(content)
-    // setDocumentTitle(data.title);
-    // console.log(editorRef.current);
-
   };
 
   textEditorData();
@@ -292,18 +289,14 @@ import { useParams } from 'react-router-dom';
       <div className="mx-auto max-w-4xl p-16">
         <div className="min-h-[1056px] w-full rounded-lg border border-gray-200 bg-white p-12 shadow-sm">
           <div
-            // ref={editorRef}
-            // contentEditable
-            // onKeyDown={handleKeyDown}
-            // className="min-h-[1000px] w-full outline-none"
-            // style={{ fontFamily, fontSize: `${fontSize}px` }}
             ref={editorRef}
-      contentEditable
-      onInput={handleInput} // Triggered on user input
-      className="min-h-[1000px] w-full outline-none"
-      style={{ fontFamily: "Arial", fontSize: "11px" }}
-      dangerouslySetInnerHTML={{ __html: content }} // Inject formatted HTML
-          />
+            contentEditable
+            onKeyDown={handleKeyDown}
+            onInput={handleInput} // Triggered on user input
+            className="min-h-[1000px] w-full outline-none"
+            style={{ fontFamily, fontSize: "11px" }}
+            dangerouslySetInnerHTML={{ __html: content }} // Inject formatted HTML
+          ></div>
         </div>
       </div>
     </div>

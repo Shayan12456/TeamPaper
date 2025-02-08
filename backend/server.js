@@ -151,10 +151,11 @@ app.get("/text-editor/:id", async (req, res) => {
 
 app.put("/text-editor/:id", async (req, res) => {
   const title = req.body.documentTitle;
+  const content = req.body.content;
   const id = req.params.id;
-    console.log(req.body, id)
-  await Document.findOneAndUpdate({_id: id}, {title});
-  res.end();
+  console.log(req.body, id)
+  req.body.documentTitle?await Document.findOneAndUpdate({_id: id}, {title}):await Document.findOneAndUpdate({_id: id}, {content});
+  res.status(204);
 });
 
 app.get("*", (req, res)=>{
