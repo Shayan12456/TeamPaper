@@ -1,1 +1,7 @@
 @import "tailwindcss";
+
+@media (max-width: 535px) {
+    .small-screen-left-nav {
+        flex-direction: column;
+    }
+}

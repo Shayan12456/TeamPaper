@@ -118,13 +118,19 @@ app.post("/logout", (req, res) => {
   res.clearCookie("accessToken"); // Clear the token cookie
   res.json({ message: "Logged out successfully" });
 });
-// app.post("/newdoc", verifyToken, async (req, res) => {
+
+app.get("/document", verifyToken, async (req, res)=>{
+  console.log(req.email)
+  const docs = await Document.find({ owner: req.email });
+
+  res.json({ docs });
+});
 
 app.post("/newdoc", verifyToken, async (req, res) => {
   try{
     console.log("passed");
     const data = req.body;
-    const existingUser = await User.findOne({ email: data.owner });
+    const existingUser = await User.findOne({ email: req.email });
     
     if(!existingUser) {
       return res.status(401).json({ error: "User not found" });
@@ -133,28 +139,68 @@ app.post("/newdoc", verifyToken, async (req, res) => {
     const newDoc = new Document({ title: data.title, content: data.content, owner: data.owner });
     await newDoc.save();
   
-    console.log(newDoc);
+    existingUser.documents.push(newDoc._id);
+    await existingUser.save();
+
     res.status(200).json({ message: "Document created", newDoc });
   }catch(err){
     console.log(err);
   }
 });
 
-app.get("/text-editor/:id", async (req, res) => {
+app.post("/backend-api-to-save-text", async (req, res) => {
+  try{
+    console.log("passed");
+    const data = req.body;
+    // const existingUser = await User.findOne({ email: req.email });
+    
+    // if(!existingUser) {
+    //   return res.status(401).json({ error: "User not found" });
+    // }
+  
+    // const newDoc = new Document({ title: data.title, content: data.content, owner: data.owner });
+    // await newDoc.save();
+  
+    // existingUser.documents.push(newDoc._id);
+    // await existingUser.save();
+
+    console.log(data)
+
+    // res.status(200).json({ message: "Document created", newDoc });
+  }catch(err){
+    console.log(err);
+  }
+});
+
+app.get("/text-editor/:id", verifyToken, async (req, res) => {
+    try{
+    
     const id = req.params.id;
     
     // Check if the Document already exists using the findOne() method
     const existingDoc = await Document.findOne({ _id: id });
 
+    if(!existingDoc) {
+      return res.status(404).json({ error: "Doc not found" });
+    }
+
+    if(existingDoc && !(existingDoc.owner == req.email)){
+      return res.status(401);
+    }
+
     res.json(existingDoc);
+  }catch(err){
+    console.log("error", err);
+  }
   });
 
-app.put("/text-editor/:id", async (req, res) => {
+app.put("/text-editor/:id", verifyToken, async (req, res) => {
   const title = req.body.documentTitle;
   const content = req.body.content;
   const id = req.params.id;
   console.log(req.body, id)
-  req.body.documentTitle?await Document.findOneAndUpdate({_id: id}, {title}):await Document.findOneAndUpdate({_id: id}, {content});
+  await Document.findOneAndUpdate({_id: id}, {title, content});
+  res.json({req: req.body})
   res.status(204);
 });
 

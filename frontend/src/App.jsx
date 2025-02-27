@@ -1,8 +1,7 @@
 import { Home, NotFoundError, SignIn, SignUp, DocDashboard, PrivatePage, TextEditor }  from "./pages/index"
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, } from 'react-router-dom';
 import MainFooterLayout from './components/layout/MainFooterLayout';
 import MainNavbarLayout from './components/layout/MainNavbarLayout';
-import Test from "./pages/Test";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import { AuthProvider } from './context/AuthContext';
 
@@ -31,7 +30,11 @@ function App() {
                     <DocDashboard />
                   </ProtectedRoute>
                   }/>
-            <Route path="/text-editor/:id" element={<TextEditor />} />
+            <Route path="/text-editor/:id" element={
+              <ProtectedRoute>
+                <TextEditor />
+              </ProtectedRoute>
+              } />
             <Route path="*" element={<NotFoundError />} />
           </Routes>
 

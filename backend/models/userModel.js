@@ -18,7 +18,9 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: "Author",
     required: true,
-  },
+  }, 
+  documents: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Document' }], // Array of references
+
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);
