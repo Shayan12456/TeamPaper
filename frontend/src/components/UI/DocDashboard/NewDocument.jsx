@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, FileText } from 'lucide-react';
 import Cookies from "js-cookie";
+import { set } from 'draft-js/lib/DefaultDraftBlockRenderMap';
 
 export default function NewDocument() {
-
+    const [user, setUser] = useState("");
+    console.log(user, "user");
     const checkAuth = async () => {
         try {
           const response = await fetch("http://localhost:8080/auth/check", {
@@ -12,18 +14,18 @@ export default function NewDocument() {
           });
   
           const data = await response.json();       
-          return data;
+          setUser(data.email);
 
         } catch (error) {
           console.error("Error verifying authentication:", error);
         }
       }
-      
+
+      useEffect(() => {
+        checkAuth();
+      }, []);
 
     async function createDocument(){
-        
-        checkAuth();
-
        const documentData = await fetch("http://localhost:8080/newdoc", {
             method: "POST",
             headers: {
@@ -32,7 +34,7 @@ export default function NewDocument() {
             body: JSON.stringify({
                 title: "Untitled Document",
                 content: "",
-                owner: 'def@gmail.com',
+                owner: user,
             }),
             credentials: "include",
         });

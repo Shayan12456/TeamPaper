@@ -31,8 +31,11 @@ function Signup() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      window.location.href = "http://localhost:5173/document"
-      
+      setTimeout(() => {
+        window.location.href = "http://localhost:5173/document";
+      }
+      , 3000);
+
     } catch (error) {
       console.error('Error fetching data:', error);
       window.location.href = "http://localhost:5173/signup";
@@ -49,7 +52,7 @@ function Signup() {
 
           const data = await response.json();
           setIsAuthenticated(data.authenticated);
-        
+          console.log(isAuthenticated)
 
       } catch (error) {
         console.error("Error verifying authentication:", error);
@@ -63,7 +66,7 @@ function Signup() {
 // asynchronous function when dealt with async awit leads the sequential exec of operations either synchronous or asynchronous
   return (
     <>
-      {isAuthenticated ? window.location.href = "http://localhost:5173/tool" :
+      {isAuthenticated ? window.location.href = "http://localhost:5173/document" :
         <div className="min-h-screen w-full flex items-center justify-center bg-background">
           <Card className="w-full max-w-md mx-4">
             <CardHeader className="space-y-1">
@@ -77,7 +80,8 @@ function Signup() {
                   Continue with Google
                 </Button>
               </div> */}
-
+              {/* here e.preventDefault() needed because Backend sets accessToken, but the page refresh discards it. */}
+              {/* Without e.preventDefault(), the form was submitting normally, causing a page reload that interrupted the fetch request before the response (including access tokens) could be processed. ✅ */}
               <form onSubmit={(e) => { e.preventDefault(); sendDataToBackend(); }}>
                 <div className="space-y-2">
                   <Label htmlFor="name">Username</Label>

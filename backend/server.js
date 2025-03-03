@@ -58,7 +58,7 @@ app.post("/signup", async (req, res) => {
         // Create and save the user (this creates the database and collection if they don't exist)
         const hashedPassword = await bcrypt.hash(data.password, 10);
         const newUser = new User({ ...data, password: hashedPassword });
-        await newUser.save()
+        let re = await newUser.save()
         // Create a token with non-sensitive information (e.g., user ID, email)
         const tokenPayload = { _id: newUser._id, email: newUser.email }
         const token = jwt.sign(tokenPayload, SECRET_KEY, {
@@ -120,15 +120,16 @@ app.post("/logout", (req, res) => {
 });
 
 app.get("/document", verifyToken, async (req, res)=>{
-  console.log(req.email)
-  const docs = await Document.find({ owner: req.email });
-
-  res.json({ docs });
+  console.log(req.email);
+  const docs = await User.findOne({ email: req.email });
+  console.log("docs", docs);
+  const resp = (docs.documents.length>0)?await Document.find({ _id: { $in: docs.documents }}):[];
+  console.log(resp)
+  res.json({ docs: resp });
 });
 
 app.post("/newdoc", verifyToken, async (req, res) => {
   try{
-    console.log("passed");
     const data = req.body;
     const existingUser = await User.findOne({ email: req.email });
     
@@ -136,9 +137,9 @@ app.post("/newdoc", verifyToken, async (req, res) => {
       return res.status(401).json({ error: "User not found" });
     }
   
-    const newDoc = new Document({ title: data.title, content: data.content, owner: data.owner });
+    const newDoc = new Document({ title: data.title, content: data.content, owner: req.email });
     await newDoc.save();
-  
+  console.log(newDoc, "newDoc")
     existingUser.documents.push(newDoc._id);
     await existingUser.save();
 
@@ -184,9 +185,9 @@ app.get("/text-editor/:id", verifyToken, async (req, res) => {
       return res.status(404).json({ error: "Doc not found" });
     }
 
-    if(existingDoc && !(existingDoc.owner == req.email)){
-      return res.status(401);
-    }
+    // if(existingDoc && !(existingDoc.owner == req.email)){
+    //   return res.status(401);
+    // }
 
     res.json(existingDoc);
   }catch(err){
@@ -195,13 +196,71 @@ app.get("/text-editor/:id", verifyToken, async (req, res) => {
   });
 
 app.put("/text-editor/:id", verifyToken, async (req, res) => {
+  console.log("received")
   const title = req.body.documentTitle;
-  const content = req.body.content;
+  const content = req.body.rawContent;
   const id = req.params.id;
-  console.log(req.body, id)
-  await Document.findOneAndUpdate({_id: id}, {title, content});
-  res.json({req: req.body})
+  const doc = await Document.findOne({_id: id});
+  const emailOfAccess = jwt.verify(req.cookies.accessToken, SECRET_KEY).email;
+  console.log(doc, emailOfAccess)
+
+  if(emailOfAccess !== doc.owner || doc.editor.includes(emailOfAccess)){
+    if(doc.viewer.includes(emailOfAccess)){
+      return res.status(401).json({message: "Viewer cannot make changes."});
+    }
+  }else{
+    doc.title = title;
+    doc.content = content;
+    await doc.save();
+    res.json({message: "Document updated"});
+    res.status(204);
+  }
+});
+
+app.post("/grant-access/:id/share", verifyToken, async (req, res) => {
+  const docId = req.params.id;
+  const userForAccess = await User.findOne({ email: req.body.email });
+  const existingDoc = await Document.findOne({ _id: docId });
+  if(!userForAccess || !existingDoc){
+    return res.status(404).json({ error: "User or Document not found" });
+  }
+  if(existingDoc.owner !== req.email){
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  if(existingDoc.owner === userForAccess.email){
+    return res.status(401).json({ error: "Owner cannot be added as editor or viewer" });
+  }
+  if(existingDoc.editor.includes(userForAccess.email) || existingDoc.viewer.includes(userForAccess.email)){
+    return res.status(401).json({ error: "User already has access" });
+  }
+  if(req.body.accessType === "editor"){
+    existingDoc.editor.push(userForAccess.email);
+    userForAccess.documents.push(docId);
+  }
+  else{
+    existingDoc.viewer.push(userForAccess.email);
+    userForAccess.documents.push(docId);
+  }
+  await existingDoc.save();
+  await userForAccess.save();
+  res.json({message: "Access granted"});
   res.status(204);
+});
+
+app.delete("/document/:id", verifyToken, async (req, res) => {
+  const id = req.params.id;
+  const doc = await Document.findOne({_id: id});
+  const emailOfAccess = jwt.verify(req.cookies.accessToken, SECRET_KEY).email;
+  console.log(doc.owner, emailOfAccess)
+  if(emailOfAccess !== doc.owner){
+    console.log("receiving request")
+
+    return res.status(401).json({message: "Unauthorized"});
+  }
+  await Document
+  .findOneAndDelete({_id: id});
+  res.json({message: "Document deleted"});
+  // res.status(204);
 });
 
 app.get("*", (req, res)=>{
