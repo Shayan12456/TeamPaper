@@ -4,11 +4,20 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const cookieParser = require("cookie-parser");
-const app = express();
+const jwt = require("jsonwebtoken");//For creating and verifying JSON Web Tokens.
+const http = require("http");
+const { Server } = require("socket.io");
+
 const User = require('./models/userModel');
 const Document = require('./models/documentModel');
-const jwt = require("jsonwebtoken");//For creating and verifying JSON Web Tokens.
+
 env.config();
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "http://localhost:5173", credentials: true }, // Allow React frontend
+});
 
 const PORT = process.env.PORT || 8080
 const SECRET_KEY = process.env.SECRET_KEY
@@ -22,17 +31,42 @@ app.use(cors({
 app.use(cookieParser()); // ✅ Parse cookies
 
 //DB Connection
-mongoose.connect('mongodb+srv://shayandeveloper12:abcd@cluster0.gj6rrny.mongodb.net/teampaper?retryWrites=true&w=majority&appName=Cluster0').then(()=>{
+mongoose.connect(process.env.MONGO_URI).then(()=>{
     console.log("connected to database")
+});
+
+// io.on("connection", (socket)=>{
+  
+// })
+
+// const documentNamespace = io.of("/document");
+// documentNamespace.on("connection", (socket) => {
+//   console.log(`✅ User connected to /document: ${socket.id}`);
+// });
+
+const textEditorNamespace = io.of("/text-editor");
+textEditorNamespace.on("connection", (socket) => {
+  console.log("user connected", socket.id);
+  socket.on('disconnect', () => {
+    console.log("user DISconnected", socket.id); 
+  });
+
+  socket.on("joinRoom", (room) => {
+    console.log(room.roomId);
+  });
+
+  socket.on("userMakingChanges", (state) => {
+    console.log(state)
+    textEditorNamespace.emit("updateWithNewChanges", state)
+  });
+  
 });
 
 // Middleware to Protect Routes
 const verifyToken = (req, res, next) => {
-  const token = req.cookies.accessToken; 
-
-  if (!token) return res.status(401).json({ error: "Unauthorized" });
-
   try {
+      const token = req.cookies.accessToken; 
+      if (!token) return res.status(401).json({ error: "Unauthorized" });
       let data = jwt.verify(token, SECRET_KEY);
       req.email = data.email;
       next();
@@ -120,11 +154,11 @@ app.post("/logout", (req, res) => {
 });
 
 app.get("/document", verifyToken, async (req, res)=>{
-  console.log(req.email);
+  // console.log(req.email);
   const docs = await User.findOne({ email: req.email });
-  console.log("docs", docs);
+  // console.log("docs", docs);
   const resp = (docs.documents.length>0)?await Document.find({ _id: { $in: docs.documents }}):[];
-  console.log(resp)
+  // console.log(resp)
   res.json({ docs: resp });
 });
 
@@ -180,7 +214,8 @@ app.get("/text-editor/:id", verifyToken, async (req, res) => {
     
     // Check if the Document already exists using the findOne() method
     const existingDoc = await Document.findOne({ _id: id });
-
+    console.log("HTTP se FRONTEND pr data gaya", existingDoc)
+    
     if(!existingDoc) {
       return res.status(404).json({ error: "Doc not found" });
     }
@@ -189,20 +224,23 @@ app.get("/text-editor/:id", verifyToken, async (req, res) => {
     //   return res.status(401);
     // }
 
+    textEditorNamespace.on("joinRoom", (socket)=>{
+      console.log("Room Joined")
+    })
+
     res.json(existingDoc);
   }catch(err){
     console.log("error", err);
   }
   });
 
-app.put("/text-editor/:id", verifyToken, async (req, res) => {
-  console.log("received")
+app.put("/text-editor/:id/share", verifyToken, async (req, res) => {
+  console.log("HTTP se BACKEND pr data aaya", req.body.rawContent)
   const title = req.body.documentTitle;
   const content = req.body.rawContent;
   const id = req.params.id;
   const doc = await Document.findOne({_id: id});
   const emailOfAccess = jwt.verify(req.cookies.accessToken, SECRET_KEY).email;
-  console.log(doc, emailOfAccess)
 
   if(emailOfAccess !== doc.owner || doc.editor.includes(emailOfAccess)){
     if(doc.viewer.includes(emailOfAccess)){
@@ -251,7 +289,7 @@ app.delete("/document/:id", verifyToken, async (req, res) => {
   const id = req.params.id;
   const doc = await Document.findOne({_id: id});
   const emailOfAccess = jwt.verify(req.cookies.accessToken, SECRET_KEY).email;
-  console.log(doc.owner, emailOfAccess)
+  // console.log(doc.owner, emailOfAccess)
   if(emailOfAccess !== doc.owner){
     console.log("receiving request")
 
@@ -267,6 +305,7 @@ app.get("*", (req, res)=>{
     res.status(404);
 });
 
-app.listen(PORT, ()=>{
+server.listen(PORT, ()=>{
     console.log("app is listening on port:", PORT)
 });
+

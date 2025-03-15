@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react';
 import { NewDocument, RecentDocuments } from '../components/UI/index';
+import { io } from "socket.io-client";
+
+
 export default function DocDashboard(){
   const [recentDocs, setRecentDocs] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
+    // const newSocket = io("http://localhost:8080/document", { transports: ["websocket"] });
+
+    // newSocket.on("connect", ()=>{
+    //   console.log(`✅ Connected to /document namespace: ${newSocket.id}`);
+    //   newSocket.emit("message", "Hello from frontend!");
+    // });
+
     const func = async () => {
       try {   
           const res = await fetch("http://localhost:8080/document", {

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { convertToRaw, convertFromRaw } from "draft-js";
+import { io, Socket } from "socket.io-client";
 
  function App() {
   const [editorState, setEditorState] = useState(
@@ -22,6 +23,7 @@ import { convertToRaw, convertFromRaw } from "draft-js";
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [accessType, setAccessType] = useState("editor");
+  const socketRef = useRef<Socket | null>(null); // ✅ Define correct type
 
   const toggleModal = () => setIsOpen(!isOpen);
 
@@ -39,13 +41,14 @@ import { convertToRaw, convertFromRaw } from "draft-js";
     });
   };
 
-
   // Extracting the 'id' from the URL params
   const { id } = useParams();
-  console.log(id);
 
   // two use effect both having their own state vars, so on the first one state change there is rerender before second one is triggered
   useEffect(()=>{
+    socketRef.current = io("http://localhost:8080/text-editor", { transports: ["websocket"] });
+    socketRef.current.emit("joinRoom", { roomId: id });
+
     const fetchDocument = async () => {
       try {
         const response = await fetch("http://localhost:8080/text-editor/"+id, {
@@ -54,13 +57,13 @@ import { convertToRaw, convertFromRaw } from "draft-js";
         });
 
         const data = await response.json();
-        console.log("Fetched Data:", JSON.stringify(data.content, null, 2)); // Debugging
+        console.log("HTTP se FRONTEND pr data aaya:", (data)); // Debugging
 
         if (data.content && data.content.blocks) {
           if (!data.content.entityMap) {
             data.content.entityMap = {}; // Ensure entityMap exists
           }
-          console.log(EditorState.createWithContent(convertFromRaw(data.content)))
+          // console.log(EditorState.createWithContent(convertFromRaw(data.content)))
           setEditorState(EditorState.createWithContent(convertFromRaw(data.content)));
         } else {
           console.warn("Invalid or empty content, loading blank editor.");
@@ -74,11 +77,75 @@ import { convertToRaw, convertFromRaw } from "draft-js";
     };
 
     fetchDocument();
+
+    socketRef.current?.on("updateWithNewChanges", (updatedState) => {
+      try {
+        console.log("📩 Received updateWithNewChanges:", updatedState);
+    
+        // Ensure received data is valid
+        if (updatedState && updatedState.blocks) {
+          if (!updatedState.entityMap) {
+            updatedState.entityMap = {}; // ✅ Ensure entityMap exists
+          }
+        
+          try {
+            // Convert the raw content to Draft.js EditorState
+            const contentState = convertFromRaw(updatedState);
+            // console.log(EditorState.createWithContent(contentState));
+            setEditorState(EditorState.createWithContent(contentState));
+            console.log("✅ Editor state updated with new changes");
+          } catch (error) {
+            console.error("❌ Error converting received content to EditorState:", error);
+            // setEditorState(EditorState.createEmpty()); // Load empty editor if conversion fails
+          }
+        }else {
+          console.warn("⚠️ Received invalid or empty content, ignoring update.");
+        }
+      } catch (error) {
+        console.error("❌ Error handling updateWithNewChanges:", error);
+      }
+    });
+    
+    return () => {
+      socketRef.current?.disconnect();
+    };
+    
   }, []);//Render → useEffect Runs → State Updates → Re-Render
+
+
+
+  // socketRef.current?.on("updateWithNewChanges", (updatedState) => {
+  //   try {
+  //     console.log("📩 Received updateWithNewChanges:", updatedState);
+  
+  //     // Ensure received data is valid
+  //     if (updatedState && updatedState.blocks) {
+  //       if (!updatedState.entityMap) {
+  //         updatedState.entityMap = {}; // ✅ Ensure entityMap exists
+  //       }
+      
+  //       try {
+  //         // Convert the raw content to Draft.js EditorState
+  //         const contentState = convertFromRaw(updatedState);
+  //         // console.log(EditorState.createWithContent(contentState));
+  //         setEditorState(EditorState.createWithContent(contentState));
+  //         console.log("✅ Editor state updated with new changes");
+  //       } catch (error) {
+  //         console.error("❌ Error converting received content to EditorState:", error);
+  //         // setEditorState(EditorState.createEmpty()); // Load empty editor if conversion fails
+  //       }
+  //     }else {
+  //       console.warn("⚠️ Received invalid or empty content, ignoring update.");
+  //     }
+  //   } catch (error) {
+  //     console.error("❌ Error handling updateWithNewChanges:", error);
+  //   }
+  // });
 
   let textEditorData = async () => {
     const rawContent = convertToRaw(editorState.getCurrentContent());
-    const documentData = await fetch("http://localhost:8080/text-editor/"+id, {
+    console.log("HTTP se BACKEND pr DATA gaya", rawContent)
+    const documentData = await fetch("http://localhost:8080/text-editor/"+id+"/share", {
       method: "PUT",  
       headers: {
         "Content-Type": "application/json"
@@ -160,7 +227,8 @@ import { convertToRaw, convertFromRaw } from "draft-js";
 
       <Editor
         editorState={editorState}
-        onEditorStateChange={(state)=>{setEditorState(state);setIsSaved(false);}}
+        // onEditorStateChange={(state)=>{console.log(state);setEditorState(state);setIsSaved(false);socketRef.current?.emit("userMakingChanges", editorState.getCurrentContent() )}}
+        onEditorStateChange={(state)=>{setEditorState(state);setIsSaved(false);console.log((convertToRaw(state.getCurrentContent())));socketRef.current?.emit("userMakingChanges", convertToRaw(state.getCurrentContent()))}}
         toolbarClassName="flex sticky top-0 z-50 !justify-center mx-auto !border-0 !border-b-2 !border-[#ccc] shadow-md"
         editorClassName="mt-6 bg-white p-5 shadow-lg min-h-[1300px] max-w-5xl mx-auto mb-12 border-2 rounded-sm border-gray-300"
         editorStyle={{ minHeight: "1300px" }}
