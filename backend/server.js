@@ -35,9 +35,9 @@ mongoose.connect(process.env.MONGO_URI).then(()=>{
     console.log("connected to database")
 });
 
-// io.on("connection", (socket)=>{
+io.on("connection", (socket)=>{
   
-// })
+})
 
 // const documentNamespace = io.of("/document");
 // documentNamespace.on("connection", (socket) => {
@@ -61,6 +61,29 @@ textEditorNamespace.on("connection", (socket) => {
   });
   
 });
+
+// const textEditorNamespace = io.of("/text-editor");
+
+// textEditorNamespace.on("connection", (socket) => {
+//   console.log("✅ User connected:", socket.id);
+
+//   socket.on("disconnect", () => {
+//     console.log("❌ User disconnected:", socket.id);
+//   });
+
+//   socket.on("joinRoom", (room) => {
+//     socket.join(room.roomId);
+//     console.log(`📂 User joined room: ${room.roomId}`);
+//   });
+
+//   socket.on("userMakingChanges", ({ roomId, state }) => {
+//     console.log("📩 Received update from user:", state);
+
+//     // ✅ Emit to everyone in the room **EXCEPT the sender**
+//     socket.to(roomId).emit("updateWithNewChanges", state);
+//   });
+// });
+
 
 // Middleware to Protect Routes
 const verifyToken = (req, res, next) => {
