@@ -38,8 +38,7 @@ mongoose.connect(process.env.MONGO_URI).then(() => {
   console.log("connected to database");
 });
 
-io.on("connection", (socket) => {});
-
+//🔹 2. With Namespace Only
 const textEditorNamespace = io.of("/text-editor");
 textEditorNamespace.on("connection", (socket) => {
   console.log("user connected", socket.id);
@@ -47,19 +46,41 @@ textEditorNamespace.on("connection", (socket) => {
     console.log("user disconnected", socket.id);
   });
 
-  socket.on("joinRoom", (room) => {
-    console.log(room.roomId);
-  });
-
   socket.on("userMakingChanges", (state) => {
-    console.log(state);
-    textEditorNamespace.emit("updateWithNewChanges", state);
+    console.log("sock", state);
+    // textEditorNamespace.emit("updateWithNewChanges", state);
+    if (socket.roomId) {
+      console.log("near", state.rawContent)
+      socket.to(socket.roomId).emit("updateWithNewChanges", state.rawContent);//-emot difference
+      //room without namesoace - "/" - defalut namespace
+      // The default namespace in Socket.IO is simply /, which is used when you don’t explicitly define a custom namespace.
+
+
+    }
   });
 });
 
-textEditorNamespace.on("joinRoom", (socket) => {
-  console.log("Room Joined");
-});
+// 🔹 3. With Namespace + Rooms ✅ (Your current setup)
+// const textEditorNamespace = io.of("/text-editor");
+// textEditorNamespace.on("connection", (socket) => {
+//   socket.on("joinRoom", ({ roomId }) => {
+//     socket.join(roomId);//super important - 
+//     socket.roomId = roomId; // optional: track room per socket
+//     console.log(`Joined room ${roomId}`);
+//   });
+// -  // room id either from frontend or in backend stored in socket at timr of joining or sent from frontend when ever user makes changes
+//   socket.on("userMakingChanges", (data) => {
+//     // if (socket.roomId) {
+//     //   socket.to(socket.roomId).emit("updateWithNewChanges", data);
+//     // }
+//     console.log("data", data)
+//     if (socket.roomId) {
+//       socket.to(socket.roomId).emit("updateWithNewChanges", data.rawContent);
+//     }
+//   });
+// });
+
+// -  hi logged
 
 const verifyToken = (req, res, next) => {
   try {
@@ -240,7 +261,7 @@ app.get("/text-editor/:id", verifyToken, async (req, res) => {
     const cached = await redis.get(`document:${id}`);
 
     if (cached) {
-      return res.json({ existingDoc: cached });
+      return res.json(JSON.parse(cached));
     }
 
     // Check if the Document already exists using the findOne() method
@@ -267,23 +288,28 @@ app.get("/text-editor/:id", verifyToken, async (req, res) => {
 });
 
 app.put("/text-editor/:id/share", verifyToken, async (req, res) => {
-  console.log("HTTP se BACKEND pr data aaya", req.body.rawContent);
-  const title = req.body.documentTitle;
-  const content = req.body.rawContent;
-  const id = req.params.id;
-  const doc = await Document.findOne({ _id: id });
-  const emailOfAccess = jwt.verify(req.cookies.accessToken, SECRET_KEY).email;
+  try {
+    console.log("HTTP se BACKEND pr data aaya", req.body.rawContent);
+    const title = req.body.documentTitle;
+    const content = req.body.rawContent;
+    const id = req.params.id;
+    const doc = await Document.findOne({ _id: id });
+    const emailOfAccess = jwt.verify(req.cookies.accessToken, SECRET_KEY).email;
 
-  if (emailOfAccess !== doc.owner || doc.editor.includes(emailOfAccess)) {
-    if (doc.viewer.includes(emailOfAccess)) {
-      return res.status(401).json({ message: "Viewer cannot make changes." });
+    if (emailOfAccess !== doc.owner || doc.editor.includes(emailOfAccess)) {
+      if (doc.viewer.includes(emailOfAccess)) {
+        return res.status(401).json({ message: "Viewer cannot make changes." });
+      }
+    } else {
+      doc.title = title;
+      doc.content = content;
+      await doc.save(); // await ensures the DB is actually written
+      await redis.del(`document:${id}`);
+      return res.status(200).json({ message: "Document updated" }); // only after DB write
     }
-  } else {
-    doc.title = title;
-    doc.content = content;
-    await doc.save();
-    res.json({ message: "Document updated" });
-    res.status(204);
+  } catch (err) {
+    console.error("❌ Error saving to DB:", err);
+    return res.status(500).json({ error: "Failed to save document" });
   }
 });
 
