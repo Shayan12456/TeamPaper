@@ -38,49 +38,22 @@ mongoose.connect(process.env.MONGO_URI).then(() => {
   console.log("connected to database");
 });
 
-//🔹 2. With Namespace Only
+// 🔹 With Namespace + Rooms ✅ (Your current setup)
 const textEditorNamespace = io.of("/text-editor");
 textEditorNamespace.on("connection", (socket) => {
-  console.log("user connected", socket.id);
-  socket.on("disconnect", () => {
-    console.log("user disconnected", socket.id);
+  socket.on("joinRoom", ({ roomId }) => {
+    socket.join(roomId); //super important
+    socket.roomId = roomId; // optional: track room per socket
+    console.log(`Joined room ${roomId}`);
   });
-
-  socket.on("userMakingChanges", (state) => {
-    console.log("sock", state);
-    // textEditorNamespace.emit("updateWithNewChanges", state);
+  // room id either from frontend or in backend stored in socket at time of joining or
+  // sent from frontend when ever user makes changes from the frontend `userMakingChanges`
+  socket.on("userMakingChanges", (data) => {
     if (socket.roomId) {
-      console.log("near", state.rawContent)
-      socket.to(socket.roomId).emit("updateWithNewChanges", state.rawContent);//-emot difference
-      //room without namesoace - "/" - defalut namespace
-      // The default namespace in Socket.IO is simply /, which is used when you don’t explicitly define a custom namespace.
-
-
+      socket.to(socket.roomId).emit("updateWithNewChanges", data.rawContent);
     }
   });
 });
-
-// 🔹 3. With Namespace + Rooms ✅ (Your current setup)
-// const textEditorNamespace = io.of("/text-editor");
-// textEditorNamespace.on("connection", (socket) => {
-//   socket.on("joinRoom", ({ roomId }) => {
-//     socket.join(roomId);//super important - 
-//     socket.roomId = roomId; // optional: track room per socket
-//     console.log(`Joined room ${roomId}`);
-//   });
-// -  // room id either from frontend or in backend stored in socket at timr of joining or sent from frontend when ever user makes changes
-//   socket.on("userMakingChanges", (data) => {
-//     // if (socket.roomId) {
-//     //   socket.to(socket.roomId).emit("updateWithNewChanges", data);
-//     // }
-//     console.log("data", data)
-//     if (socket.roomId) {
-//       socket.to(socket.roomId).emit("updateWithNewChanges", data.rawContent);
-//     }
-//   });
-// });
-
-// -  hi logged
 
 const verifyToken = (req, res, next) => {
   try {
@@ -95,8 +68,18 @@ const verifyToken = (req, res, next) => {
 };
 
 //frontend protection
-app.get("/auth/check", verifyToken, (req, res) => {
-  res.status(200).json({ authenticated: true, email: req.email });
+app.get("/auth/check", verifyToken, async (req, res) => {
+  const email = req.email;
+  const cached = await redis.get(`auth:${email}`);
+  if (cached) return res.json(JSON.parse(cached));
+
+  // otherwise:
+  await redis.set(
+    `auth:${email}`,
+    JSON.stringify({ authenticated: true, email }),
+    { EX: 30 }
+  );
+  return res.status(200).json({ authenticated: true, email });
 });
 
 // Protected Route Example - to protect backend
@@ -201,7 +184,7 @@ app.get("/document", verifyToken, async (req, res) => {
   });
 
   console.log(`🧠 Cache Miss → Cached for ${TTL}s`);
-  res.json({ docs: resp });
+  return res.json({ docs: resp });
 });
 
 app.post("/newdoc", verifyToken, async (req, res) => {
@@ -225,7 +208,7 @@ app.post("/newdoc", verifyToken, async (req, res) => {
     existingUser.documents.push(newDoc._id);
     await existingUser.save();
 
-    res.status(200).json({ message: "Document created", newDoc });
+    return res.status(200).json({ message: "Document created", newDoc });
   } catch (err) {
     console.log(err);
   }
@@ -281,7 +264,7 @@ app.get("/text-editor/:id", verifyToken, async (req, res) => {
     //   return res.status(401);
     // }
 
-    res.json(existingDoc);
+    return res.json(existingDoc);
   } catch (err) {
     console.log("error", err);
   }
@@ -304,6 +287,7 @@ app.put("/text-editor/:id/share", verifyToken, async (req, res) => {
       doc.title = title;
       doc.content = content;
       await doc.save(); // await ensures the DB is actually written
+      redis.del("documents:all");
       await redis.del(`document:${id}`);
       return res.status(200).json({ message: "Document updated" }); // only after DB write
     }
@@ -343,8 +327,11 @@ app.post("/grant-access/:id/share", verifyToken, async (req, res) => {
   }
   await existingDoc.save();
   await userForAccess.save();
-  res.json({ message: "Access granted" });
-  res.status(204);
+
+  await redis.del("documents:all");
+  await redis.del(`document:${docId}`);
+
+  return res.json({ message: "Access granted" });
 });
 
 app.delete("/document/:id", verifyToken, async (req, res) => {
@@ -358,13 +345,15 @@ app.delete("/document/:id", verifyToken, async (req, res) => {
     return res.status(401).json({ message: "Unauthorized" });
   }
   await Document.findOneAndDelete({ _id: id });
+  redis.del("documents:all");
+  redis.del(`document:${id}`);
   console.log("🗑️ Cache invalidated: documents:all"); //all means folder
-  res.json({ message: "Document deleted" });
+  return res.json({ message: "Document deleted" });
   // res.status(204);
 });
 
 app.get("*", (req, res) => {
-  res.status(404);
+  return res.status(404);
 });
 
 server.listen(PORT, () => {
