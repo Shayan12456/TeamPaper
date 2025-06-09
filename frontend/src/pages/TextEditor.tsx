@@ -1,22 +1,19 @@
-import React, { useCallback, useState, useRef, useEffect } from 'react';
-import { EditorState } from 'draft-js';
-import { Editor } from 'react-draft-wysiwyg';
+import React, { useCallback, useState, useRef, useEffect } from "react";
+import { EditorState } from "draft-js";
+import { Editor } from "react-draft-wysiwyg";
 import { Button } from "../components/UI/Login.jsx/components/ui/button";
 import "react-quill/dist/quill.snow.css"; // Import styles
-import 'react-draft-wysiwyg/dist/react-draft-wysiwyg.css';
-import {
-  FileText,
-  Star,
-  Share2,
-  X
-} from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import { FileText, Star, Share2, X } from "lucide-react";
+import { useParams } from "react-router-dom";
 import { convertToRaw, convertFromRaw } from "draft-js";
-import { io, Socket } from "socket.io-client";
+import { io } from "socket.io-client";
 
 function App() {
-  const [editorState, setEditorState] = useState(() => EditorState.createEmpty());
-  const [documentTitle, setDocumentTitle] = useState('');
+  const [editorState, setEditorState] = useState(() =>
+    EditorState.createEmpty()
+  );
+  const [documentTitle, setDocumentTitle] = useState("");
   const [isSaved, setIsSaved] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -30,7 +27,7 @@ function App() {
 
   const handleSubmit = async () => {
     toggleModal();
-    await fetch(`http://localhost:8080/grant-access/${id}/share`, {
+    await fetch(import.meta.env.VITE_API_URL + "/grant-access/${id}/share", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, accessType }),
@@ -47,10 +44,13 @@ function App() {
     };
   };
 
-  const emitChanges = useCallback(debounce((rawContent) => {
-    socketRef.current?.emit("userMakingChanges", rawContent);
-    lastContentRef.current = JSON.stringify(rawContent);
-  }, 200), []);
+  const emitChanges = useCallback(
+    debounce((rawContent) => {
+      socketRef.current?.emit("userMakingChanges", {rawContent});
+      lastContentRef.current = JSON.stringify(rawContent);
+    }, 200),
+    []
+  );
 
   const handleEditorChange = (state) => {
     setEditorState(state);
@@ -64,31 +64,35 @@ function App() {
   };
 
   useEffect(() => {
-    socketRef.current = io("http://localhost:8080/text-editor", {
-      transports: ["websocket"],
-    });
+    socketRef.current = io(import.meta.env.VITE_API_URL + "/text-editor");
 
     socketRef.current.emit("joinRoom", { roomId: id });
 
     // Fetch document from DB
     const fetchDocument = async () => {
       try {
-        const response = await fetch(`http://localhost:8080/text-editor/${id}`, {
-          method: "GET",
-          credentials: "include",
-        });
-        const data = await response.json();
-
-        if (data.content?.blocks) {
+        const response = await fetch(
+          import.meta.env.VITE_API_URL + `/text-editor/${id}`,
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
+        const existingDoc = await response.json();
+        if (existingDoc.content?.blocks) {
           const content = {
-            ...data.content,
-            entityMap: data.content.entityMap || {},
+            ...existingDoc.content,
+            entityMap: existingDoc.content.entityMap || {},
           };
-          setEditorState(EditorState.createWithContent(convertFromRaw(content)));
+          setEditorState(
+            EditorState.createWithContent(convertFromRaw(content))
+          );
           lastContentRef.current = JSON.stringify(content);
         }
+        setDocumentTitle(existingDoc.title || "Untitled Document");
 
-        setDocumentTitle(data.title || "Untitled Document");
+        console.log("Document fetched successfully:", existingDoc);
+
       } catch (error) {
         console.error("Error fetching doc:", error);
       }
@@ -99,6 +103,7 @@ function App() {
     // Handle real-time updates from others
     socketRef.current.on("updateWithNewChanges", (incoming) => {
       try {
+        console.log("hI")
         if (incoming?.blocks) {
           incoming.entityMap = incoming.entityMap || {};
           const stringified = JSON.stringify(incoming);
@@ -108,6 +113,8 @@ function App() {
             setEditorState(EditorState.createWithContent(content));
             lastContentRef.current = stringified;
           }
+          // 🧠 await pauses only the async function it's in — not just the block ({}), but the entire function scope that wraps it.
+
         }
       } catch (err) {
         console.error("Error applying socket update:", err);
@@ -117,17 +124,24 @@ function App() {
     return () => socketRef.current?.disconnect();
   }, [id]);
 
+  // Connects to the correct namespace ✅
+  // Joins a dynamic room ✅
+  // Emits user changes ✅
+  // Listens for real-time updates ✅
+
   const textEditorData = async () => {
     const rawContent = convertToRaw(editorState.getCurrentContent());
-    const res = await fetch(`http://localhost:8080/text-editor/${id}/share`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ documentTitle, rawContent }),
-      credentials: "include",
-    });
+    const res = await fetch(
+      import.meta.env.VITE_API_URL + `/text-editor/${id}/share`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentTitle, rawContent }),
+        credentials: "include",
+      }
+    );
 
-    const result = await res.json();
-    console.log(result);
+    console.log(await res.json());
   };
 
   return (
@@ -150,14 +164,20 @@ function App() {
 
           <div className="flex items-center space-x-4">
             {!isSaved && (
-              <button onClick={async () => {
-                await textEditorData();
-                setIsSaved(true);
-              }} className="bg-blue-100 px-4 py-2 rounded-full text-blue-700 hover:bg-blue-200">
+              <button
+                onClick={async () => {
+                  await textEditorData();
+                  setIsSaved(true);
+                }}
+                className="bg-blue-100 px-4 py-2 rounded-full text-blue-700 hover:bg-blue-200"
+              >
                 Save
               </button>
             )}
-            <button onClick={toggleModal} className="bg-blue-100 px-6 py-2 rounded-full text-blue-700 hover:bg-blue-200 flex items-center space-x-1">
+            <button
+              onClick={toggleModal}
+              className="bg-blue-100 px-6 py-2 rounded-full text-blue-700 hover:bg-blue-200 flex items-center space-x-1"
+            >
               <Share2 className="h-4 w-4" />
               <span>Share</span>
             </button>
@@ -212,6 +232,5 @@ function App() {
     </div>
   );
 }
-
 
 export default App;
