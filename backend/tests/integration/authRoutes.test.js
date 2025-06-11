@@ -1,4 +1,5 @@
 const request = require("supertest");
+const express = require("express");
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken"); //For creating and verifying JSON Web Tokens.
@@ -173,21 +174,21 @@ describe("POST /logout", () => {
   });
 
   it("should handle unexpected server error gracefully", async () => {
-    // Mock res.clearCookie to throw an error
-    // const mock = jest
-    //   .spyOn(express.response, "clearCookie")
-    //   .mockImplementation(() => {
-    //     throw new Error("Simulated error");
-    //   });
+    // 👇 Simulate failure in res.clearCookie
+    const mock = jest
+      .spyOn(express.response, "clearCookie")
+      .mockImplementation(() => {
+        throw new Error("Simulated error");
+      });
 
     const res = await request(server)
       .post("/logout")
-      .set("Cookie", [`accessToken=some-fake-token`]);
+      .set("Cookie", [`accessToken=some-fake-cookie`]);
 
     expect(res.statusCode).toBe(500);
     expect(res.body.error).toBe("Failed to logout");
 
-    mock.mockRestore(); // Always clean up
+    mock.mockRestore(); // 👈 Restore to avoid affecting other tests
   });
 });
 
