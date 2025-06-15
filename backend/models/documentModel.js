@@ -7,11 +7,10 @@ const DocumentSchema = new mongoose.Schema({
         },
         content: {
             type: Object,
+            default: ""
         },
         owner: {//can create, edit and comment and delete the document - can be only one
             type: String,
-            required: true,
-            unique: true
         },
         editor: {//can edit and comment
             type: [{ type: mongoose.Schema.Types.String, ref: "User" }],
