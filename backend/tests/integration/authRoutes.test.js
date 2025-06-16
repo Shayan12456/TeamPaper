@@ -5,6 +5,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken"); //For creating and verifying JSON Web Tokens.
 const server = require("../../server"); // make sure server exports the app
 const User = require("../../models/userModel");
+const redis = require("../../redisClient");
 
 const SECRET_KEY = process.env.SECRET_KEY;
 
@@ -80,18 +81,22 @@ describe("POST /signup", () => {
 });
 
 describe("POST /login", () => {
-  const testUser = {
+  const baseUser = {
     name: "Login Test User",
     email: "logintest@example.com",
     password: "Login123!",
   };
 
+  beforeAll(async () => {
+    await request(server).post("/signup").send(baseUser);
+  });
+
   it("should login successfully with valid credentials", async () => {
     const res = await request(server).post("/login").send({
-      email: testUser.email,
-      password: testUser.password,
+      email: baseUser.email,
+      password: baseUser.password,
     });
-
+    // console.log(res.body)
     expect(res.statusCode).toBe(200);
     expect(res.body.message).toBe("Logged in successfully");
     expect(res.headers["set-cookie"]).toBeDefined();
@@ -99,7 +104,7 @@ describe("POST /login", () => {
 
   it("should return 400 if email is missing", async () => {
     const res = await request(server).post("/login").send({
-      password: testUser.password,
+      password: baseUser.password,
     });
 
     expect(res.statusCode).toBe(400);
@@ -108,7 +113,7 @@ describe("POST /login", () => {
 
   it("should return 400 if password is missing", async () => {
     const res = await request(server).post("/login").send({
-      email: testUser.email,
+      email: baseUser.email,
     });
 
     expect(res.statusCode).toBe(400);
@@ -127,7 +132,7 @@ describe("POST /login", () => {
 
   it("should return 401 if password is incorrect", async () => {
     const res = await request(server).post("/login").send({
-      email: testUser.email,
+      email: baseUser.email,
       password: "WrongPassword123",
     });
 
@@ -190,8 +195,13 @@ describe("POST /logout", () => {
 
     mock.mockRestore(); // 👈 Restore to avoid affecting other tests
   });
+
+    afterAll(async ()=>{
+      await User.deleteMany({ email: "logoutuser@example.com" })
+    })
 });
 
 afterAll(async () => {
   await mongoose.connection.close();
+  await redis.quit();
 });
