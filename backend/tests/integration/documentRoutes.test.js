@@ -527,6 +527,70 @@ describe("POST /grant-access/:id/share", () => {
   });
 });
 
+describe("DELETE /document/:id", () => {
+  let nonOwnerToken, nonOwner;
+  beforeAll(async () => {
+    nonOwner = await User.create({
+      name: "nonowner",
+      email: "nonowner@example.com",
+      password: "hashedpass",
+    });
+
+    // Generate tokens
+    nonOwnerToken = jwt.sign(
+      { _id: nonOwner._id, email: nonOwner.email },
+      SECRET_KEY
+    );
+  });
+
+  it("should delete the document if user is owner", async () => {
+    const res = await request(server)
+      .delete(`/document/${savedDocument._id.toString()}`)
+      .set("Cookie", [`accessToken=${token}`]);
+
+    expect(res.status).toBe(204);
+    const deleted = await Document.findById(savedDocument._id.toString());
+    expect(deleted).toBeNull();
+  });
+
+  it("should fail if non-owner tries to delete", async () => {
+    const tempDoc = new Document({
+      title: "Temp Doc",
+      content: "Should not be deleted",
+      owner: savedUser.email,
+      editor: [nonOwner.email],
+    });
+    await tempDoc.save();
+
+    const res = await request(server)
+      .delete(`/document/${tempDoc._id}`)
+      .set("Cookie", [`accessToken=${nonOwnerToken}`]);
+
+    expect(res.status).toBe(401);
+    expect(res.body.message).toBe("Unauthorized");
+  });
+
+  it("should return 404 if document does not exist", async () => {
+    const fakeId = new mongoose.Types.ObjectId();
+
+    const res = await request(server)
+      .delete(`/document/${fakeId}`)
+      .set("Cookie", [`accessToken=${token}`]);
+
+    expect(res.status).toBe(404);
+    expect(res.body.message).toBe("Document not found.");
+  });
+
+  it("should fail with 401 if no token is provided", async () => {
+    const res = await request(server).delete(`/document/${savedDocument._id.toString()}`);
+    expect(res.status).toBe(401);
+  });
+
+  afterAll(async () => {
+    await User.deleteOne({ email: nonOwner.email });
+  });
+});
+
 afterAll(async () => {
   await User.deleteOne({ email: savedUser.email });
   await Document.deleteMany({ owner: savedUser.email });
