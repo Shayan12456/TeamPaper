@@ -18,6 +18,8 @@ function App() {
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [accessType, setAccessType] = useState("editor");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [shareErrorMessage, setShareErrorMessage] = useState("");
 
   const socketRef = useRef(null);
   const lastContentRef = useRef(null);
@@ -26,13 +28,28 @@ function App() {
   const toggleModal = () => setIsOpen(!isOpen);
 
   const handleSubmit = async () => {
-    toggleModal();
-    await fetch(import.meta.env.VITE_API_URL + "/grant-access/${id}/share", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, accessType }),
-      credentials: "include",
-    });
+    setShareErrorMessage("");
+    try {
+      const response = await fetch(import.meta.env.VITE_API_URL + `/grant-access/${id}/share`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, accessType }),
+        credentials: "include",
+      });
+      if (!response.ok) {
+        let errorMsg = "Failed to grant access.";
+        try {
+          const errJson = await response.json();
+          if (errJson && errJson.message) errorMsg = errJson.message;
+        } catch (e) {}
+        setShareErrorMessage(errorMsg);
+        return;
+      }
+      toggleModal();
+    } catch (error) {
+      setShareErrorMessage("An error occurred while granting access.");
+      console.error("Error granting access:", error);
+    }
   };
 
   // Debounce helper
@@ -46,7 +63,7 @@ function App() {
 
   const emitChanges = useCallback(
     debounce((rawContent) => {
-      socketRef.current?.emit("userMakingChanges", {rawContent});
+      socketRef.current?.emit("userMakingChanges", { rawContent });
       lastContentRef.current = JSON.stringify(rawContent);
     }, 200),
     []
@@ -78,7 +95,23 @@ function App() {
             credentials: "include",
           }
         );
+        // Check for error status
+        if (!response.ok) {
+          // Try to parse error message from backend
+          let errorMsg = "Access denied or an error occurred.";
+          try {
+            const errJson = await response.json();
+            if (errJson && errJson.message) errorMsg = errJson.message;
+          } catch (e) {}
+          setErrorMessage(errorMsg);
+          return;
+        }
         const existingDoc = await response.json();
+        // If backend returns a message field (e.g., access denied), show it
+        if (existingDoc && existingDoc.message) {
+          setErrorMessage(existingDoc.message);
+          return;
+        }
         if (existingDoc.content?.blocks) {
           const content = {
             ...existingDoc.content,
@@ -90,10 +123,10 @@ function App() {
           lastContentRef.current = JSON.stringify(content);
         }
         setDocumentTitle(existingDoc.title || "Untitled Document");
-
+        setErrorMessage(""); // Clear error if successful
         console.log("Document fetched successfully:", existingDoc);
-
       } catch (error) {
+        setErrorMessage("An error occurred while fetching the document.");
         console.error("Error fetching doc:", error);
       }
     };
@@ -103,7 +136,7 @@ function App() {
     // Handle real-time updates from others
     socketRef.current.on("updateWithNewChanges", (incoming) => {
       try {
-        console.log("hI")
+        console.log("hI");
         if (incoming?.blocks) {
           incoming.entityMap = incoming.entityMap || {};
           const stringified = JSON.stringify(incoming);
@@ -114,7 +147,6 @@ function App() {
             lastContentRef.current = stringified;
           }
           // 🧠 await pauses only the async function it's in — not just the block ({}), but the entire function scope that wraps it.
-
         }
       } catch (err) {
         console.error("Error applying socket update:", err);
@@ -214,6 +246,12 @@ function App() {
               <option value="viewer">Viewer</option>
             </select>
 
+            {shareErrorMessage && (
+              <div className="mb-4 p-2 bg-red-100 text-red-800 rounded text-center text-sm">
+                {shareErrorMessage}
+              </div>
+            )}
+
             <Button onClick={handleSubmit} className="w-full">
               Grant Access
             </Button>
@@ -221,14 +259,21 @@ function App() {
         </div>
       )}
 
-      {/* Editor */}
-      <Editor
-        editorState={editorState}
-        onEditorStateChange={handleEditorChange}
-        toolbarClassName="flex sticky top-0 z-50 justify-center mx-auto border-b-2 border-gray-300 shadow-md"
-        editorClassName="mt-6 bg-white p-5 shadow-lg min-h-[1300px] max-w-5xl mx-auto mb-12 border-2 rounded-sm border-gray-300"
-        editorStyle={{ minHeight: "1300px" }}
-      />
+      {/* Show error message if access denied or other error */}
+      {errorMessage ? (
+        <div className="max-w-2xl mx-auto mt-12 p-6 bg-red-100 text-red-800 rounded shadow text-center text-lg">
+          {errorMessage}
+        </div>
+      ) : (
+        // Editor
+        <Editor
+          editorState={editorState}
+          onEditorStateChange={handleEditorChange}
+          toolbarClassName="flex sticky top-0 z-50 justify-center mx-auto border-b-2 border-gray-300 shadow-md"
+          editorClassName="mt-6 bg-white p-5 shadow-lg min-h-[1300px] max-w-5xl mx-auto mb-12 border-2 rounded-sm border-gray-300"
+          editorStyle={{ minHeight: "1300px" }}
+        />
+      )}
     </div>
   );
 }

@@ -6,8 +6,8 @@ export default function Stats(){
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid md:grid-cols-4 gap-8 text-center">
                 {[
-                { number: "10M+", label: "Documents Created" },
-                { number: "150k+", label: "Active Users" },
+                { number: "1000+", label: "Documents Created" },
+                { number: "150+", label: "Active Users" },
                 { number: "99.9%", label: "Uptime" },
                 { number: "5x", label: "Faster Collaboration" }
                 ].map((stat, index) => (

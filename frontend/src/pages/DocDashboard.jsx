@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { NewDocument, RecentDocuments } from '../components/UI/index';
-import { io } from "socket.io-client";
 
 
 export default function DocDashboard(){
@@ -16,7 +15,7 @@ export default function DocDashboard(){
 
     const func = async () => {
       try {   
-          const res = await fetch("http://localhost:8080/document", {
+          const res = await fetch(import.meta.env.VITE_API_URL + "/document", {
               method: "GET",
               credentials: "include"
             });

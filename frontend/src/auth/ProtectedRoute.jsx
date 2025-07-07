@@ -7,7 +7,7 @@ const ProtectedRoute = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch("http://localhost:8080/auth/check", {
+        const response = await fetch(import.meta.env.VITE_API_URL + "/auth/check", {
           method: "GET",
           credentials: "include", // Include HTTP-only cookies
         });

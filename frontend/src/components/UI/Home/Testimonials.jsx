@@ -11,7 +11,7 @@ export default function Testimonials(){
             <div className="grid md:grid-cols-3 gap-8">
                 {[
                 {
-                    quote: "TeamPaper has transformed how our team collaborates on documents. The AI features are incredibly powerful and intuitive.",
+                    quote: "TeamPaper has transformed how our team collaborates on documents. The features are incredibly powerful and intuitive.",
                     author: "Sarah Johnson",
                     role: "Product Manager at TechCorp",
                     image: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop"

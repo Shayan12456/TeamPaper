@@ -4,7 +4,7 @@ function PrivatePage() {
 
   useEffect(()=>
     async () => {
-    const response = await fetch("http://localhost:8080/protected-backend", {
+    const response = await fetch(import.meta.env.VITE_API_URL + "/protected-backend", {
       method: "GET",
       credentials: "include", // ✅ Include credentials
     });

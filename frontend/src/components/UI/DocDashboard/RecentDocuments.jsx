@@ -28,7 +28,7 @@ export default function RecentDocuments({recentDocs}) {
 
     const handleDelete = async (id) => {
         console.log(id)
-        await fetch("http://localhost:8080/document/" + id, {
+        await fetch(import.meta.env.VITE_API_URL + "/document/" + id, {
             method: "DELETE",
             headers: {
                 "Content-Type": "application/json",
@@ -60,14 +60,6 @@ export default function RecentDocuments({recentDocs}) {
                         </button>
                         {activeMenu === doc._id && (
                             <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-10">
-                            <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center">
-                                <Pencil className="h-4 w-4 mr-2" />
-                                Rename
-                            </button>
-                            <button className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center">
-                                <Share2 className="h-4 w-4 mr-2" />
-                                Share
-                            </button>
                             <button onClick={(e)=>{e.stopPropagation();e.preventDefault();handleDelete(doc._id)}} className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-50 flex items-center">
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
