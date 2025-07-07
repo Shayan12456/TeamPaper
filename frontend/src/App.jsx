@@ -8,39 +8,50 @@ import { AuthProvider } from './context/AuthContext';
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <div className="min-h-screen flex flex-col">
+        <Router>
           {/* Navigation */}
           <MainNavbarLayout />
 
-          {/* Routes */}
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/login" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/privatepage" element={
-              <ProtectedRoute>
-                <PrivatePage />
-              </ProtectedRoute>
-                  }/>
-            <Route
+          {/* Main Content */}
+          <main className="flex-1">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/home" element={<Home />} />
+              <Route path="/login" element={<SignIn />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route
+                path="/privatepage"
+                element={
+                  <ProtectedRoute>
+                    <PrivatePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/document"
                 element={
                   <ProtectedRoute>
                     <DocDashboard />
                   </ProtectedRoute>
-                  }/>
-            <Route path="/text-editor/:id" element={
-              <ProtectedRoute>
-                <TextEditor />
-              </ProtectedRoute>
-              } />
-            <Route path="*" element={<NotFoundError />} />
-          </Routes>
+                }
+              />
+              <Route
+                path="/text-editor/:id"
+                element={
+                  <ProtectedRoute>
+                    <TextEditor />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<NotFoundError />} />
+            </Routes>
+          </main>
 
           {/* Footer */}
           <MainFooterLayout />
-      </Router>
+        </Router>
+      </div>
     </AuthProvider>
   );
 }
