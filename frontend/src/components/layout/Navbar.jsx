@@ -57,9 +57,9 @@ export default function Navbar() {
 
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-600 hover:text-black">Features</a>
-              <a href="#how-it-works" className="text-gray-600 hover:text-black">How it Works</a>
-              <a href="#testimonials" className="text-gray-600 hover:text-black">Testimonials</a>
+              <a href="/#features" className="text-gray-600 hover:text-black">Features</a>
+              <a href="/#how-it-works" className="text-gray-600 hover:text-black">How it Works</a>
+              <a href="/#testimonials" className="text-gray-600 hover:text-black">Testimonials</a>
               {isAuthenticated ? (
                 <button onClick={loggingOut} className="bg-white text-black border border-black px-4 py-1.5 rounded-lg hover:bg-black hover:text-white transition">
                   Log out
